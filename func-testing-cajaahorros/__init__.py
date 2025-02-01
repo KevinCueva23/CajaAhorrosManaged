@@ -1,6 +1,18 @@
-import os
+import logging
+import json
 import requests
+import zipfile
+import io
+import csv
+import os  
 
+app = Flask(__name__)
+from flask import Flask, jsonify
+
+
+import azure.functions as func
+
+# 🔒 Obtener credenciales desde variables de entorno
 CLIENT_ID = os.getenv('CLIENT_ID')
 CLIENT_SECRET = os.getenv('CLIENT_SECRET')
 TENANT_ID = os.getenv('TENANT_ID')
@@ -14,6 +26,85 @@ def get_token():
         "grant_type": "client_credentials"
     }
     response = requests.post(url, data=body)
-    return response.json()
+    return response.json().get("access_token")
 
-print(get_token())  # 📌 Verifica si devuelve un token o un error
+
+@app.route('/defender-agents-report', methods=['GET'])
+def defender_agents_report():
+    auth_token = get_token()
+    headers = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': "Bearer " + auth_token
+    }
+    
+    body = {
+        "reportName": "DefenderAgents",
+        "select": [
+            "DeviceId", "_ManagedBy", "DeviceName", "DeviceState", "PendingFullScan", "PendingReboot",
+            "PendingManualSteps", "PendingOfflineScan", "CriticalFailure",
+            "MalwareProtectionEnabled", "RealTimeProtectionEnabled", "NetworkInspectionSystemEnabled",
+            "SignatureUpdateOverdue", "QuickScanOverdue", "FullScanOverdue", "RebootRequired",
+            "FullScanRequired", "EngineVersion", "SignatureVersion", "AntiMalwareVersion",
+            "LastQuickScanDateTime", "LastFullScanDateTime", "LastQuickScanSignatureVersion",
+            "LastFullScanSignatureVersion", "LastReportedDateTime", "UPN", "UserEmail", "UserName"
+        ]
+    }
+
+    response = requests.post("https://graph.microsoft.com/v1.0/deviceManagement/reports/exportJobs",
+                             data=json.dumps(body), headers=headers)
+    report_id = response.json().get('id')
+
+    # No bloquear la API, responder con el ID para consultar luego
+    return jsonify({"message": "Reporte en proceso", "report_id": report_id})
+
+
+@app.route('/defender-agents-status/<report_id>', methods=['GET'])
+def check_report_status(report_id):
+    auth_token = get_token()
+    headers = {
+        'Authorization': "Bearer " + auth_token,
+        'Accept': 'application/json'
+    }
+
+    url = f"https://graph.microsoft.com/beta/deviceManagement/reports/exportJobs('{report_id}')"
+    response = requests.get(url, headers=headers)
+    status = response.json().get('status')
+
+    if status == "completed":
+        download_url = response.json().get('url')
+        return jsonify({"status": "completed", "download_url": download_url})
+    else:
+        return jsonify({"status": status})
+
+
+@app.route('/download-report/<report_id>', methods=['GET'])
+def download_report(report_id):
+    auth_token = get_token()
+    headers = {
+        'Authorization': "Bearer " + auth_token,
+        'Accept': 'application/json'
+    }
+
+    url = f"https://graph.microsoft.com/beta/deviceManagement/reports/exportJobs('{report_id}')"
+    response = requests.get(url, headers=headers)
+    download_url = response.json().get('url')
+
+    # Descargar el informe
+    report_response = requests.get(download_url)
+    
+    # Descomprimir el archivo ZIP
+    with zipfile.ZipFile(io.BytesIO(report_response.content)) as zip_file:
+        with zip_file.open(zip_file.namelist()[0]) as csv_file:
+            lines = csv_file.read().decode('utf-8').splitlines()
+            rows = list(csv.reader(lines))
+
+    header_length = len(rows[0])
+    valid_rows = [row for row in rows[1:] if len(row) == header_length]
+    result_dict = {row[0]: dict(zip(rows[0], row)) for row in valid_rows}
+
+    return jsonify(result_dict)
+
+
+if __name__ == '__main__':
+    app.run(debug=True)
