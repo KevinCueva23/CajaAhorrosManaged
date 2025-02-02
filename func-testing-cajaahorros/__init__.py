@@ -24,8 +24,6 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     if name:
         return func.HttpResponse(f"Hello, {name}. This HTTP triggered function executed successfully.")
     else:
-        print("get_token: ", get_token())
-        
         return func.HttpResponse(
              print("Hola"),
              status_code=200
