@@ -1,10 +1,4 @@
 import logging
-import os
-import json
-import requests
-import zipfile
-import io
-import csv
 import azure.functions as func
 
 
