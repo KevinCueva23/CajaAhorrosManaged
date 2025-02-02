@@ -78,10 +78,7 @@ def defender_agents_report():
  
     response = requests.post("https://graph.microsoft.com/v1.0/deviceManagement/reports/exportJobs",
                              data=json.dumps(body), headers=headers)
-   
-    if response.status_code != 200:
-        return {"error": "Error al solicitar el informe", "details": response.text}
- 
+
     report_id = response.json().get('id')
     status = ""
  
