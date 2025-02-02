@@ -11,7 +11,16 @@ CLIENT_ID = os.getenv('CLIENT_ID')
 CLIENT_SECRET = os.getenv('CLIENT_SECRET')
 TENANT_ID = os.getenv('TENANT_ID')
 
+ 
 def main(req: func.HttpRequest) -> func.HttpResponse:
+    try:
+        result = defender_agents_report()
+        return func.HttpResponse(json.dumps(result, indent=4), mimetype="application/json")
+    except Exception as e:
+        return func.HttpResponse(f"Error: {str(e)}", status_code=500)
+
+
+#def main(req: func.HttpRequest) -> func.HttpResponse:
     logging.info('Python HTTP trigger function processed a request.')
     name = req.params.get('name')
     if not name:
@@ -25,6 +34,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     if name:
         return func.HttpResponse(f"Hello, {name}. This HTTP triggered function executed successfully.")
     else:
+        defender_agents_report()
         return func.HttpResponse(
              "Hola",
              status_code=200
@@ -42,15 +52,17 @@ def get_token():
     response = requests.post(url, data=body)
     return response.json().get("access_token")
 
+
+
 def defender_agents_report():
     auth_token = get_token()
-
+ 
     headers = {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
         'Authorization': "Bearer " + auth_token
     }
-
+ 
     body = {
         "reportName": "DefenderAgents",
         "select": [
@@ -63,36 +75,32 @@ def defender_agents_report():
             "LastFullScanSignatureVersion", "LastReportedDateTime", "UPN", "UserEmail", "UserName"
         ]
     }
-
-    response = requests.post("https://graph.microsoft.com/v1.0/deviceManagement/reports/exportJobs", 
+ 
+    response = requests.post("https://graph.microsoft.com/v1.0/deviceManagement/reports/exportJobs",
                              data=json.dumps(body), headers=headers)
+   
+    if response.status_code != 200:
+        return {"error": "Error al solicitar el informe", "details": response.text}
+ 
     report_id = response.json().get('id')
-
     status = ""
+ 
     while status != "completed":
         url = f"https://graph.microsoft.com/beta/deviceManagement/reports/exportJobs('{report_id}')"
         response = requests.get(url, headers=headers)
         status = response.json().get('status')
-        print(f"Esperando... Estado: {status}")
-
-    # Obtener la URL de descarga del informe
+ 
     download_url = response.json().get('url')
     report_response = requests.get(download_url)
-
-    # Descomprimir el archivo ZIP
+ 
     with zipfile.ZipFile(io.BytesIO(report_response.content)) as zip_file:
-        # Extraemos el contenido del ZIP y lo leemos como CSV
         with zip_file.open(zip_file.namelist()[0]) as csv_file:
             lines = csv_file.read().decode('utf-8').splitlines()
             rows = list(csv.reader(lines))
-
-    # Verificar si todas las filas tienen la misma cantidad de columnas que la primera
+ 
     header_length = len(rows[0])
     valid_rows = [row for row in rows[1:] if len(row) == header_length]
-
-    # Crear el diccionario con las filas válidas
+ 
     result_dict = {row[0]: dict(zip(rows[0], row)) for row in valid_rows}
-
-    # Imprimir directamente el resultado en consola
-    print(json.dumps(result_dict, indent=4))
-
+ 
+    return result_dict
