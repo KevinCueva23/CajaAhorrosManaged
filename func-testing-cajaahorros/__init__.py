@@ -98,7 +98,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         print("get_token: ", get_token())
         
         return func.HttpResponse(
-             defender_agents_report(),
+             print("Hola"),
              status_code=200
         )
  
