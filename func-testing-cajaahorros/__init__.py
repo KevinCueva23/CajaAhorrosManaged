@@ -98,7 +98,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         
         
         return func.HttpResponse(
-             defender_agents_report,
+             defender_agents_report(),
              status_code=200
         )
  
