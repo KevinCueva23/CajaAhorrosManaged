@@ -12,15 +12,15 @@ CLIENT_SECRET = os.getenv('CLIENT_SECRET')
 TENANT_ID = os.getenv('TENANT_ID')
 
  
-def main(req: func.HttpRequest) -> func.HttpResponse:
-    try:
-        result = defender_agents_report()
-        return func.HttpResponse(json.dumps(result, indent=4), mimetype="application/json")
-    except Exception as e:
-        return func.HttpResponse(f"Error: {str(e)}", status_code=500)
-
-
 #def main(req: func.HttpRequest) -> func.HttpResponse:
+#    try:
+#        result = defender_agents_report()
+#        return func.HttpResponse(json.dumps(result, indent=4), mimetype="application/json")
+#    except Exception as e:
+#        return func.HttpResponse(f"Error: {str(e)}", status_code=500)
+
+
+def main(req: func.HttpRequest) -> func.HttpResponse:
     logging.info('Python HTTP trigger function processed a request.')
     name = req.params.get('name')
     if not name:
