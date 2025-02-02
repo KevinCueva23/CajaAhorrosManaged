@@ -1,10 +1,22 @@
+import time
+ 
 import azure.functions as func
-import logging
+from azurefunctions.extensions.http.fastapi import Request, StreamingResponse
  
-app = func.FunctionApp()
+app = func.FunctionApp(http_auth_level=func.AuthLevel.ANONYMOUS)
  
-@app.route(route="req")
-@app.read_blob(arg_name="obj", path="samples/{id}", 
-               connection="STORAGE_CONNECTION_STRING")
-def main(req: func.HttpRequest, obj: func.InputStream):
-    logging.info(f'Python HTTP-triggered function processed: {obj.read()}')
+ 
+def generate_sensor_data():
+    """Generate real-time sensor data."""
+    for i in range(10):
+        # Simulate temperature and humidity readings
+        temperature = 20 + i
+        humidity = 50 + i
+        yield f"data: {{'temperature': {temperature}, 'humidity': {humidity}}}\n\n"
+        time.sleep(1)
+ 
+ 
+@app.route(route="stream", methods=[func.HttpMethod.GET])
+async def stream_sensor_data(req: Request) -> StreamingResponse:
+    """Endpoint to stream real-time sensor data."""
+    return StreamingResponse(generate_sensor_data(), media_type="text/event-stream")
