@@ -22,7 +22,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
              "Esta cosa no funciona :( pipipi)",
              print("Tenant:",os.environ['TENANT_ID']),
              print("Client:",os.environ['CLIENT_ID']),
-            print("Secret:",os.environ['CLIENT_SECRET']),
+             print("Secret:",os.environ['CLIENT_SECRET']),
              status_code=200
         )
  
