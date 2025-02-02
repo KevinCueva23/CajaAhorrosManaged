@@ -1,5 +1,5 @@
 import logging
- 
+import os
 import azure.functions as func
  
  
@@ -20,6 +20,9 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     else:
         return func.HttpResponse(
              "Esta cosa no funciona :( pipipi)",
+             print("Tenant:",os.environ['TENANT_ID']),
+             print("Client:",os.environ['CLIENT_ID']),
+            print("Secret:",os.environ['CLIENT_SECRET']),
              status_code=200
         )
  
