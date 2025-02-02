@@ -77,7 +77,7 @@ def defender_agents_report():
 
     # Imprimir directamente el resultado en consola
     print(json.dumps(result_dict, indent=4))
-
+    return json.dumps(result_dict, indent=4)
 
 def main(req: func.HttpRequest) -> func.HttpResponse:
     logging.info('Python HTTP trigger function processed a request.')
@@ -95,7 +95,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         return func.HttpResponse(f"Hello, {name}. This HTTP triggered function executed successfully.")
     else:
         print("TENANT_ID: ", TENANT_ID)
-        
+        print("get_token: ", get_token())
         
         return func.HttpResponse(
              defender_agents_report(),
